@@ -1,11 +1,21 @@
 /**
- * Gemma 4 E2B model management via OPFS.
- * The model is streamed directly into Origin Private File System — never buffered in memory.
- * Never store model files in the service worker cache.
+ * Gemma 2B IT GPU INT4 model management via OPFS.
+ *
+ * The model is distributed by Google through Kaggle under a gated license.
+ * Users must sign in to Kaggle and accept the Gemma terms before downloading.
+ * Once downloaded externally, the user imports the file into this app and it
+ * is streamed directly into Origin Private File System — never buffered fully
+ * in memory, never fetched anonymously from the PWA.
  */
 
-const MODEL_FILE_NAME = 'gemma4-e2b.bin';
-const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/llm_inference/gemma-2b-it-gpu-int4/float16/1/gemma-2b-it-gpu-int4.bin';
+export const MODEL_FILE_NAME = 'gemma-2b-it-gpu-int4.bin';
+
+/**
+ * Official Kaggle distribution page for Gemma 2B IT GPU INT4.
+ * Users must be signed in and have accepted the Gemma license to download.
+ */
+export const KAGGLE_MODEL_URL =
+  'https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-gpu-int4';
 
 /** Check if WebGPU is available. */
 export function isWebGPUSupported() {
@@ -41,31 +51,41 @@ export async function getModelSize() {
 }
 
 /**
- * Stream-download the model directly into OPFS.
- * Never buffers the full model in memory.
+ * Import a user-selected model file into OPFS.
+ * Streams the File object directly into storage — never holds the full
+ * file buffer in memory at once.
  *
- * @param {function} onProgress - called with (bytesReceived, totalBytes)
- * @param {AbortSignal} signal - optional abort signal
+ * @param {File} file          - File object from an <input type="file"> picker
+ * @param {function} onProgress - called with (bytesWritten, totalBytes)
+ * @param {AbortSignal} [signal] - optional abort signal
  */
-export async function downloadModel(onProgress, signal) {
+export async function importModelFile(file, onProgress, signal) {
   const root = await getOPFSRoot();
   const fileHandle = await root.getFileHandle(MODEL_FILE_NAME, { create: true });
   const writable = await fileHandle.createWritable();
 
   try {
-    const response = await fetch(MODEL_URL, { signal });
-    if (!response.ok) throw new Error(`Download failed: ${response.status}`);
+    const total = file.size;
+    let written = 0;
+    const CHUNK = 2 * 1024 * 1024; // 2 MB chunks
 
-    const total = parseInt(response.headers.get('content-length') || '0', 10);
-    let received = 0;
+    const stream = file.stream();
+    const reader = stream.getReader();
 
-    const reader = response.body.getReader();
     while (true) {
+      if (signal?.aborted) throw new DOMException('Aborted', 'AbortError');
       const { done, value } = await reader.read();
       if (done) break;
-      await writable.write(value);
-      received += value.byteLength;
-      if (onProgress) onProgress(received, total);
+
+      // Write in sub-chunks to keep the progress bar smooth
+      let offset = 0;
+      while (offset < value.byteLength) {
+        const slice = value.subarray(offset, offset + CHUNK);
+        await writable.write(slice);
+        written += slice.byteLength;
+        offset += slice.byteLength;
+        if (onProgress) onProgress(written, total);
+      }
     }
 
     await writable.close();

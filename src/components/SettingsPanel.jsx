@@ -4,7 +4,7 @@ import { usePreferences } from '../hooks/usePreferences.js';
 import { encryptAndStore, fetchAndDecrypt, clearAllData, exportAllRaw, importAllRaw } from '../storage/db.js';
 import { encrypt, decrypt, deriveKey, loadSalt, generateAndStoreSalt, storeVerificationBlob } from '../crypto/encryption.js';
 import { getAppVersion } from '../crypto/encryption.js';
-import { isModelDownloaded, deleteModel, getModelSize, formatBytes, downloadModel, isWebGPUSupported } from '../ai/modelManager.js';
+import { isModelDownloaded, deleteModel, getModelSize, formatBytes, isWebGPUSupported } from '../ai/modelManager.js';
 import ModelLoader from './ModelLoader.jsx';
 
 const BACKUP_HEADER = 'UNBURDENED_BACKUP_V1\n';
@@ -361,15 +361,16 @@ export default function SettingsPanel({ onClose, onLock }) {
           <h3 className="settings-section-title">AI Companion</h3>
           <p className="settings-hint">
             {modelDownloaded
-              ? `Model downloaded (${formatBytes(modelSize)})`
-              : 'Model not downloaded'}
+              ? `Model installed (${formatBytes(modelSize)})`
+              : 'No model installed — import required for AI features.'}
           </p>
           {!showModelDownload ? (
             <button className="btn btn-outline btn-sm" onClick={() => setShowModelDownload(true)}>
-              {modelDownloaded ? 'Re-download model' : 'Download model'}
+              {modelDownloaded ? 'Replace model file' : 'Import model file'}
             </button>
           ) : (
             <ModelLoader
+              alreadyInstalled={modelDownloaded}
               onDone={() => { setModelDownloaded(true); setShowModelDownload(false); isModelDownloaded().then(() => getModelSize().then(setModelSize)); }}
               onSkip={() => setShowModelDownload(false)}
             />

@@ -128,11 +128,15 @@ export default function SetupWizard({ onComplete }) {
 
       {step === 4 && (
         <div className="setup-step">
-          <h2 className="setup-heading">Download the AI Model</h2>
+          <h2 className="setup-heading">Set up your AI companion</h2>
           <p className="setup-subtext">
-            Unburdened uses a private AI that runs entirely on your device. No conversations are ever sent to any server.
+            Unburdened's AI runs entirely on your device — your conversations never leave it.
           </p>
-          <p className="setup-subtext setup-wifi-note">Download size: ~1–2 GB. WiFi recommended.</p>
+          <p className="setup-subtext">
+            The <strong style={{ color: 'rgba(245,240,232,0.85)' }}>Gemma 2B IT GPU INT4</strong> model
+            is distributed by Google through Kaggle under a gated license. You'll need to sign in
+            and accept the terms before downloading, then return here to import the file.
+          </p>
           <ModelLoader onDone={handleModelDone} onSkip={handleSkipModel} />
         </div>
       )}
@@ -142,7 +146,7 @@ export default function SetupWizard({ onComplete }) {
           <div className="setup-ready-icon">✓</div>
           <h2 className="setup-heading">You're all set{modelSkipped ? ' (almost)' : ''}!</h2>
           {modelSkipped && (
-            <p className="setup-subtext">You can download the AI model later from Settings → AI Companion.</p>
+            <p className="setup-subtext">You can import the AI model later from Settings → AI Companion.</p>
           )}
           <p className="setup-subtext">Add your first accountability area to get started.</p>
           <button className="btn btn-primary btn-full" onClick={handleFinish}>Go to Home Screen</button>

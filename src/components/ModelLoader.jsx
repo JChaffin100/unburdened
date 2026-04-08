@@ -1,31 +1,75 @@
 import { useState, useRef } from 'react';
 import {
-  downloadModel,
+  importModelFile,
   isWebGPUSupported,
   formatBytes,
-  isModelDownloaded,
+  KAGGLE_MODEL_URL,
 } from '../ai/modelManager.js';
 
-export default function ModelLoader({ onDone, onSkip }) {
-  const [state, setState] = useState('idle'); // idle | downloading | done | error
-  const [received, setReceived] = useState(0);
+/**
+ * ModelLoader
+ *
+ * Three-state Kaggle onboarding flow:
+ *   idle     → explain gated access, offer "Download from Kaggle" + "I already downloaded it"
+ *   import   → file picker + progress bar as the file is streamed into OPFS
+ *   done     → success confirmation
+ *   error    → error message + retry
+ *
+ * Props:
+ *   onDone   — called when the model has been successfully imported into OPFS
+ *   onSkip   — called when the user chooses "Set up later"
+ *   alreadyInstalled — if true, skip the intro and jump straight to the import state
+ */
+export default function ModelLoader({ onDone, onSkip, alreadyInstalled = false }) {
+  const [state, setState] = useState(alreadyInstalled ? 'import' : 'idle');
+  const [written, setWritten] = useState(0);
   const [total, setTotal] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
   const abortRef = useRef(null);
+  const fileRef = useRef(null);
 
   const webGPU = isWebGPUSupported();
 
-  async function startDownload() {
-    if (!webGPU) return;
-    setState('downloading');
+  // ── No WebGPU ──────────────────────────────────────────────────────────────
+  if (!webGPU) {
+    return (
+      <div className="model-loader">
+        <div className="model-no-webgpu">
+          <p>Your browser does not support WebGPU.</p>
+          <p>
+            Please use <strong>Chrome on Android</strong> (or a desktop Chromium browser
+            with WebGPU enabled) to use the AI companion.
+          </p>
+          <p>
+            You can still use Unburdened to track areas and commitments — the AI chat
+            will be unavailable until you access it from a supported browser.
+          </p>
+        </div>
+        {onSkip && (
+          <button className="btn btn-ghost btn-full" onClick={onSkip}>
+            Set up later
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── File import handler ────────────────────────────────────────────────────
+  async function handleFileSelected(file) {
+    if (!file) return;
+    setState('importing');
     setErrorMsg('');
+    setWritten(0);
+    setTotal(file.size);
+
     const controller = new AbortController();
     abortRef.current = controller;
 
     try {
-      await downloadModel(
+      await importModelFile(
+        file,
         (recv, tot) => {
-          setReceived(recv);
+          setWritten(recv);
           setTotal(tot);
         },
         controller.signal
@@ -34,76 +78,152 @@ export default function ModelLoader({ onDone, onSkip }) {
       if (onDone) onDone();
     } catch (err) {
       if (err.name === 'AbortError') {
-        setState('idle');
+        setState('import');
       } else {
         setState('error');
-        setErrorMsg(err.message || 'Download failed. Please check your connection.');
+        setErrorMsg(err.message || 'Import failed. Please try again.');
       }
     }
   }
 
-  function cancelDownload() {
+  function cancelImport() {
     abortRef.current?.abort();
   }
 
-  const pct = total > 0 ? Math.round((received / total) * 100) : 0;
+  const pct = total > 0 ? Math.round((written / total) * 100) : 0;
 
-  if (!webGPU) {
+  // ── Idle: explain Kaggle gated access ─────────────────────────────────────
+  if (state === 'idle') {
     return (
       <div className="model-loader">
-        <div className="model-no-webgpu">
-          <p>Your browser does not support WebGPU.</p>
-          <p>Please use <strong>Chrome on Android</strong> (or a desktop Chromium browser with WebGPU enabled) to use the AI companion.</p>
-          <p>You can still use Unburdened to track areas and commitments — the AI chat will be unavailable until you access it from a supported browser.</p>
+        <div className="model-kaggle-info">
+          <span className="model-kaggle-icon">🔒</span>
+          <p className="model-kaggle-text">
+            This app runs locally with the <strong>Gemma 2B IT GPU INT4</strong> model.
+            Google distributes it through Kaggle under a gated license — you must{' '}
+            <strong>sign in and accept the terms</strong> before downloading. After
+            downloading, return here and import the file to finish setup.
+          </p>
         </div>
+
+        <div className="model-kaggle-actions">
+          <a
+            href={KAGGLE_MODEL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary btn-full"
+            id="kaggle-download-btn"
+          >
+            🌐 Download from Kaggle
+          </a>
+          <button
+            className="btn btn-outline btn-full"
+            id="already-downloaded-btn"
+            onClick={() => setState('import')}
+          >
+            I already downloaded it
+          </button>
+        </div>
+
         {onSkip && (
-          <button className="btn btn-ghost btn-full" onClick={onSkip}>Skip for now</button>
+          <button className="btn btn-ghost btn-full" onClick={onSkip} id="model-skip-btn">
+            Set up later
+          </button>
         )}
       </div>
     );
   }
 
-  return (
-    <div className="model-loader">
-      {state === 'idle' && (
-        <>
-          <button className="btn btn-primary btn-full" onClick={startDownload}>
-            Download AI Model (~1–2 GB)
-          </button>
-          {onSkip && (
-            <button className="btn btn-ghost btn-full" onClick={onSkip}>Skip for now</button>
-          )}
-        </>
-      )}
+  // ── Import: file picker ────────────────────────────────────────────────────
+  if (state === 'import') {
+    return (
+      <div className="model-loader">
+        <p className="model-import-hint">
+          Select the <code>.bin</code> file you downloaded from Kaggle. It will be
+          imported directly onto this device — no data is uploaded anywhere.
+        </p>
 
-      {state === 'downloading' && (
+        <label className="model-import-area" htmlFor="model-file-input" id="model-import-label">
+          <span className="model-import-icon">📂</span>
+          <span className="model-import-label-text">Tap to select model file</span>
+          <input
+            id="model-file-input"
+            ref={fileRef}
+            type="file"
+            accept=".bin"
+            className="model-import-input"
+            onChange={(e) => handleFileSelected(e.target.files[0])}
+          />
+        </label>
+
+        <div className="model-kaggle-actions">
+          <a
+            href={KAGGLE_MODEL_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-outline btn-full"
+          >
+            🌐 Back to Kaggle download
+          </a>
+        </div>
+
+        {onSkip && (
+          <button className="btn btn-ghost btn-full" onClick={onSkip}>
+            Set up later
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  // ── Importing: progress bar ────────────────────────────────────────────────
+  if (state === 'importing') {
+    return (
+      <div className="model-loader">
+        <p className="model-import-hint">Importing model file…</p>
         <div className="model-progress-wrap">
           <div className="model-progress-bar">
             <div className="model-progress-fill" style={{ width: `${pct}%` }} />
           </div>
           <p className="model-progress-text">
-            {formatBytes(received)}{total > 0 ? ` / ${formatBytes(total)}` : ''} — {pct}%
+            {formatBytes(written)}{total > 0 ? ` / ${formatBytes(total)}` : ''} — {pct}%
           </p>
-          <button className="btn btn-ghost" onClick={cancelDownload}>Cancel</button>
+          <button className="btn btn-ghost" onClick={cancelImport}>Cancel</button>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {state === 'done' && (
+  // ── Done ───────────────────────────────────────────────────────────────────
+  if (state === 'done') {
+    return (
+      <div className="model-loader">
         <div className="model-done">
           <span className="model-done-check">✓</span>
-          <p>AI model downloaded and ready.</p>
+          <p>AI model imported and ready.</p>
         </div>
-      )}
+      </div>
+    );
+  }
 
-      {state === 'error' && (
+  // ── Error ──────────────────────────────────────────────────────────────────
+  if (state === 'error') {
+    return (
+      <div className="model-loader">
         <div className="model-error">
           <p className="model-error-msg">{errorMsg}</p>
-          <button className="btn btn-primary" onClick={startDownload}>Try again</button>
+          <button className="btn btn-primary" onClick={() => setState('import')}>
+            Try again
+          </button>
           {onSkip && (
-            <button className="btn btn-ghost" onClick={onSkip}>Skip for now</button>
+            <button className="btn btn-ghost" onClick={onSkip}>
+              Set up later
+            </button>
           )}
         </div>
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  return null;
 }
