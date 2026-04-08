@@ -104,22 +104,87 @@ export default function SettingsPanel({ onClose, onLock }) {
   }
 
   async function handleCheckUpdate() {
+    if (!navigator.serviceWorker) {
+      setUpdateMsg('Service worker not supported.');
+      return;
+    }
+
     setCheckingUpdate(true);
-    setUpdateMsg('');
+    setUpdateMsg('Checking for updates…');
+
     try {
-      const reg = await navigator.serviceWorker?.getRegistration();
-      if (!reg) { setUpdateMsg('Service worker not available.'); return; }
-      await reg.update();
-      if (reg.waiting) {
-        setUpdateMsg('Update found — reloading…');
-        reg.waiting.postMessage({ type: 'SKIP_WAITING' });
-        setTimeout(() => window.location.reload(), 1000);
-      } else {
-        setUpdateMsg(`You're on the latest version (v${appVersion})`);
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        setUpdateMsg('No service worker registration found.');
+        setCheckingUpdate(false);
+        return;
       }
-    } catch {
+
+      // Helper to trigger the final skip-waiting and hard-reload
+      const applyUpdate = (worker) => {
+        setUpdateMsg('Update ready — refreshing app…');
+        
+        // Listen for the new worker taking control
+        const onControllerChange = () => {
+          navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+          // Hard reload with cache-busting query param
+          const url = new URL(window.location.href);
+          url.searchParams.set('v', Date.now());
+          window.location.replace(url.href);
+        };
+        navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
+        // Send skip waiting
+        worker.postMessage({ type: 'SKIP_WAITING' });
+
+        // Fallback reload if controllerchange takes too long
+        setTimeout(() => window.location.reload(), 2000);
+      };
+
+      // 1. If there's already a waiting worker, apply it
+      if (reg.waiting) {
+        applyUpdate(reg.waiting);
+        return;
+      }
+
+      // 2. If it's currently installing, wait for it
+      if (reg.installing) {
+        setUpdateMsg('Update is downloading…');
+        reg.installing.addEventListener('statechange', (e) => {
+          if (e.target.state === 'installed') applyUpdate(e.target);
+        });
+        return;
+      }
+
+      // 3. Otherwise, check for new updates
+      const updateFoundPromise = new Promise((resolve) => {
+        const onUpdateFound = () => {
+          reg.removeEventListener('updatefound', onUpdateFound);
+          const newWorker = reg.installing;
+          setUpdateMsg('Update found — downloading…');
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed') {
+              applyUpdate(newWorker);
+              resolve(true);
+            }
+          });
+        };
+        reg.addEventListener('updatefound', onUpdateFound);
+        
+        // Timeout the "searching" state if nothing is found
+        setTimeout(() => resolve(false), 5000);
+      });
+
+      await reg.update();
+
+      const found = await updateFoundPromise;
+      if (!found && !reg.waiting && !reg.installing) {
+        setUpdateMsg(`You're on the latest version (v${appVersion})`);
+        setCheckingUpdate(false);
+      }
+    } catch (err) {
+      console.error('Update failed:', err);
       setUpdateMsg('Update check failed.');
-    } finally {
       setCheckingUpdate(false);
     }
   }
