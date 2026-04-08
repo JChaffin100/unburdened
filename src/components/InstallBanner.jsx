@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, '') || '';
+
 function isIOS() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
@@ -11,7 +13,7 @@ function isIOSSafari() {
 }
 
 export default function InstallBanner() {
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [deferredPrompt, setDeferredPrompt] = useState(window.deferredInstallPrompt);
   const [showAndroid, setShowAndroid] = useState(false);
   const [showIOS, setShowIOS] = useState(false);
 
@@ -19,18 +21,37 @@ export default function InstallBanner() {
     if (isInStandalone()) return;
     if (sessionStorage.getItem('install_dismissed')) return;
 
+    // Check if we already have a prompt captured
+    if (window.deferredInstallPrompt) {
+      setDeferredPrompt(window.deferredInstallPrompt);
+      setShowAndroid(true);
+      return;
+    }
+
     if (isIOSSafari()) {
       setShowIOS(true);
       return;
     }
 
-    const handler = (e) => {
+    // Listen for the prompt if it hasn't fired yet
+    const handlePrompt = () => {
+      setDeferredPrompt(window.deferredInstallPrompt);
+      setShowAndroid(true);
+    };
+
+    window.addEventListener('pwa-prompt-available', handlePrompt);
+    // Legacy support for direct event if standard listener is still needed
+    const directHandler = (e) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowAndroid(true);
     };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    window.addEventListener('beforeinstallprompt', directHandler);
+
+    return () => {
+      window.removeEventListener('pwa-prompt-available', handlePrompt);
+      window.removeEventListener('beforeinstallprompt', directHandler);
+    };
   }, []);
 
   function dismiss() {
@@ -42,7 +63,11 @@ export default function InstallBanner() {
   async function handleInstall() {
     if (!deferredPrompt) return;
     await deferredPrompt.prompt();
-    await deferredPrompt.userChoice;
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') {
+      window.deferredInstallPrompt = null;
+      setDeferredPrompt(null);
+    }
     dismiss();
   }
 
@@ -50,7 +75,7 @@ export default function InstallBanner() {
     return (
       <div className="install-banner" role="banner">
         <div className="install-banner-content">
-          <img src="/unburdened/icons/icon-72.png" alt="" className="install-banner-icon" />
+          <img src={`${BASE}/icons/icon-72.png`} alt="" className="install-banner-icon" />
           <p className="install-banner-text">Install Unburdened for the best experience</p>
         </div>
         <div className="install-banner-actions">
@@ -76,3 +101,4 @@ export default function InstallBanner() {
 
   return null;
 }
+

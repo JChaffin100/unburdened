@@ -126,7 +126,6 @@ export default function App() {
             onOpenSettings={() => setScreen(SCREEN.SETTINGS)}
             onNewArea={openNewArea}
           />
-          <InstallBanner />
         </>
       )}
 
@@ -170,6 +169,7 @@ export default function App() {
           onLock={() => { lock(); }}
         />
       )}
+      <InstallBanner />
     </div>
   );
 }
