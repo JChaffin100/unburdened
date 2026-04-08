@@ -1,0 +1,64 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+
+# Build output
+dist/
+build/
+.wasm/
+
+# Vite
+.vite/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+*.local
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Icon?
+
+# Editor
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+.history/
+
+# Project specific — keep private
+INSTRUCTIONS.md
+.claude/
+*.key
+*.pem
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Caches
+.eslintcache
+.stylelintcache
+.prettiercache
+.node_repl_history
+
+# Backups
+unburdened-backup-*.ubk
+

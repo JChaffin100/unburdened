@@ -1,0 +1,16 @@
+{
+  "name": "Unburdened",
+  "short_name": "Unburdened",
+  "description": "A private AI accountability companion",
+  "start_url": "/unburdened/",
+  "scope": "/unburdened/",
+  "display": "standalone",
+  "background_color": "#082a2c",
+  "theme_color": "#0d3d40",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/unburdened/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/unburdened/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/unburdened/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
