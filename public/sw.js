@@ -1,6 +1,6 @@
 // [DEVELOPER] Bump this version whenever you push a new release to GitHub.
 // This ensures the browser detects an update and triggers the refresh logic.
-const VERSION = '1.0.3';
+const VERSION = '1.0.4';
 const CACHE_NAME = `unburdened-v${VERSION}`;
 
 const PRECACHE_ASSETS = [
@@ -9,6 +9,7 @@ const PRECACHE_ASSETS = [
   '/unburdened/manifest.json',
   '/unburdened/icons/icon-192.png',
   '/unburdened/icons/icon-512.png',
+  '/unburdened/icons/icon-maskable-512.png',
 ];
 
 self.addEventListener('message', (event) => {
