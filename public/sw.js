@@ -1,6 +1,6 @@
 // [DEVELOPER] Bump this version whenever you push a new release to GitHub.
 // This ensures the browser detects an update and triggers the refresh logic.
-const VERSION = '1.0.6';
+const VERSION = '1.0.8';
 const CACHE_NAME = `unburdened-v${VERSION}`;
 
 const PRECACHE_ASSETS = [

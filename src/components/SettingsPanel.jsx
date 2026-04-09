@@ -388,16 +388,17 @@ export default function SettingsPanel({ onClose, onLock }) {
             <button className="btn btn-outline btn-sm" onClick={handleExportBackup}>Export encrypted backup</button>
           </div>
           <div className="settings-data-row">
-            <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer' }}>
+            <label className="btn btn-outline btn-sm" htmlFor="import-backup-input" style={{ cursor: 'pointer' }}>
               Import encrypted backup
-              <input
-                ref={backupFileRef}
-                type="file"
-                accept=".ubk"
-                style={{ display: 'none' }}
-                onChange={(e) => e.target.files[0] && handleImportBackup(e.target.files[0])}
-              />
             </label>
+            <input
+              id="import-backup-input"
+              ref={backupFileRef}
+              type="file"
+              accept=".ubk,application/octet-stream,application/x-binary,application/x-ubk"
+              style={{ position: 'fixed', top: '-100em', opacity: 0 }}
+              onChange={(e) => e.target.files[0] && handleImportBackup(e.target.files[0])}
+            />
           </div>
           {(exportStatus || importStatus) && (
             <p className="settings-msg">{exportStatus || importStatus}</p>
@@ -407,24 +408,25 @@ export default function SettingsPanel({ onClose, onLock }) {
             <button className="btn btn-outline btn-sm" onClick={exportPrefsCSV}>Export preferences CSV</button>
           </div>
           <div className="settings-data-row">
-            <label className="btn btn-outline btn-sm" style={{ cursor: 'pointer' }}>
+            <label className="btn btn-outline btn-sm" htmlFor="import-prefs-input-ub" style={{ cursor: 'pointer' }}>
               Import preferences CSV
-              <input
-                ref={prefsFileRef}
-                type="file"
-                accept=".csv"
-                style={{ display: 'none' }}
-                onChange={(e) => {
-                  const f = e.target.files[0];
-                  if (!f) return;
-                  f.text().then((t) => {
-                    const ok = importPrefsCSV(t);
-                    setImportStatus(ok ? 'Preferences imported successfully.' : 'Invalid preferences file.');
-                    prefsFileRef.current.value = '';
-                  });
-                }}
-              />
             </label>
+            <input
+              id="import-prefs-input-ub"
+              ref={prefsFileRef}
+              type="file"
+              accept=".csv,text/csv,text/plain,application/octet-stream,text/comma-separated-values,application/csv"
+              style={{ position: 'fixed', top: '-100em', opacity: 0 }}
+              onChange={(e) => {
+                const f = e.target.files[0];
+                if (!f) return;
+                f.text().then((t) => {
+                  const ok = importPrefsCSV(t);
+                  setImportStatus(ok ? 'Preferences imported successfully.' : 'Invalid preferences file.');
+                  prefsFileRef.current.value = '';
+                });
+              }}
+            />
           </div>
         </section>
 
