@@ -15,7 +15,10 @@ export const MODEL_FILE_NAME = 'gemma-2b-it-gpu-int4.bin';
  * Users must be signed in and have accepted the Gemma license to download.
  */
 export const KAGGLE_MODEL_URL =
-  'https://www.kaggle.com/models/google/gemma/tfLite/gemma-2b-it-gpu-int4';
+  'https://www.kaggle.com/models/google/gemma/tfLite/gemma-1.1-2b-it-gpu-int4';
+
+/** Maximum expected size for the INT4 model (roughly 1.6GB, so 2.2GB is a safe ceiling). */
+export const MAX_MODEL_SIZE_BYTES = 2.2 * 1024 * 1024 * 1024;
 
 /** Check if WebGPU is available. */
 export function isWebGPUSupported() {

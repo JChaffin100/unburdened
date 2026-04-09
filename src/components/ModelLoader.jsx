@@ -57,6 +57,21 @@ export default function ModelLoader({ onDone, onSkip, alreadyInstalled = false }
   // ── File import handler ────────────────────────────────────────────────────
   async function handleFileSelected(file) {
     if (!file) return;
+
+    // Validation: Check extension
+    if (!file.name.toLowerCase().endsWith('.bin')) {
+      setState('error');
+      setErrorMsg('Invalid file type. Please select the .bin file from the TFLite download.');
+      return;
+    }
+
+    // Validation: Check size (prevent importing unquantized 3.7GB+ models)
+    if (file.size > MAX_MODEL_SIZE_BYTES) {
+      setState('error');
+      setErrorMsg(`This file is too large (${formatBytes(file.size)}). You likely downloaded the "F16" or "Keras" version. Please download the "gemma-1.1-2b-it-gpu-int4" TFLite variation.`);
+      return;
+    }
+
     setState('importing');
     setErrorMsg('');
     setWritten(0);
