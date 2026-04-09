@@ -8,6 +8,7 @@ import { getModelFile } from './modelManager.js';
 
 let _llm = null;
 let _initializing = false;
+let _modelUrl = null;
 
 /** Initialize the LLM from OPFS. Call once after unlock if model is downloaded. */
 export async function initLLM(onProgress) {
@@ -24,10 +25,13 @@ export async function initLLM(onProgress) {
     );
 
     const modelFile = await getModelFile();
+    // Using createObjectURL is much more memory efficient than .arrayBuffer()
+    // as it allows the browser to stream the file from disk (OPFS).
+    _modelUrl = URL.createObjectURL(modelFile);
 
     _llm = await LlmInference.createFromOptions(filesetResolver, {
       baseOptions: {
-        modelAssetBuffer: await modelFile.arrayBuffer(),
+        modelAssetPath: _modelUrl,
       },
       maxTokens: 1024,
       topK: 40,
@@ -47,6 +51,10 @@ export async function destroyLLM() {
   if (_llm) {
     try { _llm.close(); } catch {}
     _llm = null;
+  }
+  if (_modelUrl) {
+    URL.revokeObjectURL(_modelUrl);
+    _modelUrl = null;
   }
 }
 

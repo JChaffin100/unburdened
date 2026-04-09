@@ -150,6 +150,7 @@ export default function App() {
         <ChatSession
           area={chatArea}
           onEndSession={endSession}
+          onBack={() => setScreen(SCREEN.AREA_DETAIL)}
         />
       )}
 

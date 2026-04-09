@@ -6,7 +6,7 @@ import { streamResponse, isLLMReady, initLLM } from '../ai/inferenceEngine.js';
 import { isModelDownloaded } from '../ai/modelManager.js';
 import { PERSONA_LABELS } from '../ai/systemPrompts.js';
 
-export default function ChatSession({ area, onEndSession }) {
+export default function ChatSession({ area, onEndSession, onBack }) {
   const { sessionKey } = useAuth();
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -115,6 +115,7 @@ export default function ChatSession({ area, onEndSession }) {
     <div className="chat-session">
       <div className="chat-header">
         <div className="chat-header-left">
+          <button className="back-btn" onClick={onBack}>← Back</button>
           <h2 className="chat-area-name">{area.name}</h2>
         </div>
         <div className="chat-header-right">
