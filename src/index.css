@@ -374,7 +374,7 @@ body {
   transition: background var(--transition), color var(--transition);
 }
 .icon-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
-.icon-btn svg { display: block; }
+.icon-btn svg { display: block; width: 22px; height: 22px; }
 .icon-btn.sm { padding: 5px; }
 .icon-btn.danger-btn { color: #c0392b; }
 .icon-btn.danger-btn:hover { background: rgba(192,57,43,0.1); }
