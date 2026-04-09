@@ -27,7 +27,7 @@ build/
 ._*
 Thumbs.db
 ehthumbs.db
-Icon?
+Icon\r
 
 # Editor
 .vscode/
