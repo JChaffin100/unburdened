@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth.jsx';
-import { useAreas } from './hooks/useAreas.js';
+import { useAreas } from './hooks/useAreas.jsx';
 import { usePreferences } from './hooks/usePreferences.js';
 import { fetchAndDecrypt } from './storage/db.js';
 
@@ -53,7 +53,6 @@ export default function App() {
 
   // On setup complete, go home
   function handleSetupComplete() {
-    loadAreas();
     setScreen(SCREEN.HOME);
   }
 

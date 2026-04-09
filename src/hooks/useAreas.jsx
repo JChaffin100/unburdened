@@ -1,16 +1,23 @@
-import { useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useAuth } from './useAuth.jsx';
 import { encryptAndStore, fetchAllAndDecrypt, deleteRecord, deleteSessionsByArea } from '../storage/db.js';
+
+const AreasContext = createContext(null);
 
 function generateId() {
   return `area_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function useAreas(sessionKey) {
+export function AreasProvider({ children }) {
+  const { sessionKey } = useAuth();
   const [areas, setAreas] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const loadAreas = useCallback(async () => {
-    if (!sessionKey) return;
+    if (!sessionKey) {
+      setAreas([]);
+      return;
+    }
     setLoading(true);
     try {
       const records = await fetchAllAndDecrypt('areas', sessionKey);
@@ -21,7 +28,8 @@ export function useAreas(sessionKey) {
         order: r.order ?? 0,
         ...r.data,
       }));
-      decoded.sort((a, b) => (a.lastCheckinAt || 0) - (b.lastCheckinAt || 0));
+      // Sort: most recently checked in at the bottom (or custom order)
+      decoded.sort((a, b) => b.order - a.order);
       setAreas(decoded);
     } catch (err) {
       console.error('Failed to load areas', err);
@@ -30,7 +38,17 @@ export function useAreas(sessionKey) {
     }
   }, [sessionKey]);
 
+  // Automatically load areas when session is unlocked
+  useEffect(() => {
+    if (sessionKey) {
+      loadAreas();
+    } else {
+      setAreas([]);
+    }
+  }, [sessionKey, loadAreas]);
+
   const createArea = useCallback(async ({ name, description, persona = 'Balanced', nudgeDays }) => {
+    if (!sessionKey) return;
     const id = generateId();
     const now = Date.now();
     const data = { name, description, persona, commitments: [], nudgeDays: nudgeDays ?? 3 };
@@ -44,6 +62,7 @@ export function useAreas(sessionKey) {
   }, [sessionKey, loadAreas]);
 
   const updateArea = useCallback(async (id, updates) => {
+    if (!sessionKey) return;
     const existing = areas.find((a) => a.id === id);
     if (!existing) return;
     const { id: _id, createdAt, lastCheckinAt, order, ...data } = existing;
@@ -57,6 +76,7 @@ export function useAreas(sessionKey) {
   }, [sessionKey, areas, loadAreas]);
 
   const touchArea = useCallback(async (id) => {
+    if (!sessionKey) return;
     const existing = areas.find((a) => a.id === id);
     if (!existing) return;
     const { id: _id, createdAt, order, lastCheckinAt: _lc, ...data } = existing;
@@ -80,6 +100,7 @@ export function useAreas(sessionKey) {
   }, [updateArea]);
 
   const reorderAreas = useCallback(async (newOrder) => {
+    if (!sessionKey) return;
     // newOrder: array of ids in new order
     const now = Date.now();
     for (let i = 0; i < newOrder.length; i++) {
@@ -89,11 +110,35 @@ export function useAreas(sessionKey) {
       await encryptAndStore('areas', sessionKey, id, data, {
         createdAt,
         lastCheckinAt,
-        order: now - i, // descending order values
+        order: now - i,
       });
     }
     await loadAreas();
   }, [sessionKey, areas, loadAreas]);
 
-  return { areas, loading, loadAreas, createArea, updateArea, touchArea, deleteArea, updateCommitments, reorderAreas };
+  return (
+    <AreasContext.Provider
+      value={{
+        areas,
+        loading,
+        loadAreas,
+        createArea,
+        updateArea,
+        touchArea,
+        deleteArea,
+        updateCommitments,
+        reorderAreas,
+      }}
+    >
+      {children}
+    </AreasContext.Provider>
+  );
+}
+
+export function useAreas() {
+  const context = useContext(AreasContext);
+  if (!context) {
+    throw new Error('useAreas must be used within an AreasProvider');
+  }
+  return context;
 }

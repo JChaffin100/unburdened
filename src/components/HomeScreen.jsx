@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Sortable from 'sortablejs';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { useAreas } from '../hooks/useAreas.js';
+import { useAreas } from '../hooks/useAreas.jsx';
 import { fetchAndDecrypt } from '../storage/db.js';
 import AreaCard from './AreaCard.jsx';
 import { isModelDownloaded } from '../ai/modelManager.js';
@@ -24,7 +24,6 @@ export default function HomeScreen({ onOpenArea, onOpenSettings, onNewArea }) {
   const sortableRef = useRef(null);
 
   useEffect(() => {
-    loadAreas();
     // Load user name
     fetchAndDecrypt('profile', sessionKey, 'user').then((rec) => {
       if (rec?.data?.name) setUserName(rec.data.name);

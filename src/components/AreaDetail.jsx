@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
-import { useAreas } from '../hooks/useAreas.js';
+import { useAreas } from '../hooks/useAreas.jsx';
 import { useSessions } from '../hooks/useSessions.js';
 import { fetchAllAndDecrypt } from '../storage/db.js';
 
@@ -21,7 +21,6 @@ export default function AreaDetail({ areaId, onBack, onStartSession, onEditArea 
   const [deletingSession, setDeletingSession] = useState(null);
 
   useEffect(() => {
-    loadAreas();
     loadSessions(areaId);
   }, [areaId]);
 

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../hooks/useAuth.jsx';
 import { useSessions } from '../hooks/useSessions.js';
-import { useAreas } from '../hooks/useAreas.js';
+import { useAreas } from '../hooks/useAreas.jsx';
 import { buildSummaryPrompt } from '../ai/systemPrompts.js';
 import { generateText, isLLMReady } from '../ai/inferenceEngine.js';
 
@@ -12,7 +12,7 @@ function generateCommitmentId() {
 export default function SessionEnd({ area, messages, onDone, onCancel }) {
   const { sessionKey } = useAuth();
   const { saveSession, loadSummary, saveSummary } = useSessions(sessionKey);
-  const { updateArea, touchArea, loadAreas } = useAreas(sessionKey);
+  const { updateArea, touchArea } = useAreas();
 
   const [takeaway, setTakeaway] = useState('');
   const [commitments, setCommitments] = useState(
@@ -73,7 +73,6 @@ export default function SessionEnd({ area, messages, onDone, onCancel }) {
         }
       }
 
-      await loadAreas();
       onDone();
     } catch (err) {
       console.error('Failed to save session', err);
